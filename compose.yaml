@@ -13,7 +13,8 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
 
   mysql:
     build: ./mysql
@@ -21,10 +22,16 @@ services:
       - db_data:/var/lib/mysql
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: 'p@ssword'
-      MYSQL_DATABASE: 'football_contract_sim'
+      MYSQL_ROOT_PASSWORD: "p@ssword"
+      MYSQL_DATABASE: "football_contract_sim"
     ports:
       - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 10s
 
 volumes:
   db_data: {}
