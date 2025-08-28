@@ -10,3 +10,17 @@ services:
     command: sh -c "npm run dev"
     ports:
       - "3000:3000"
+
+  mysql:
+    build: ./mysql
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: 'p@ssword'
+      MYSQL_DATABASE: 'football_contract_sim'
+    ports:
+      - "3306:3306"
+
+volumes:
+  db_data: {}
