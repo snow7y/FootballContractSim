@@ -6,6 +6,7 @@
   "service": "app",
   "workspaceFolder": "/app",
   "forwardPorts": [3000],
+  "remoteUser": "node",
   // "postCreateCommand": "npm ci && npx prisma generate || true",
   // "updateContentCommand": "npx prisma generate || true",
   "customizations": {
