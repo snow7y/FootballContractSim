@@ -1,4 +1,5 @@
 # FootballContractSim
+
 サッカー選手の契約シミュレーションゲーム
 
 ## 初回起動時
@@ -36,4 +37,3 @@ npm install
 ```powershell
 docker compose up
 ```
-
