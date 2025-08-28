@@ -18,5 +18,3 @@ export default async function PlayersPage() {
     </div>
   );
 }
-
-// (旧 CreateForm はクライアント側 CreatePlayerForm に移行)
