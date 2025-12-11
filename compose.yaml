@@ -35,9 +35,10 @@ services:
 
 volumes:
   db_data: {}
-  node_modules:
-    driver: local
-    driver_opts:
-      type: none
-      device: ${PWD}/node_modules
-      o: bind
+  node_modules: {}
+  # node_modules:
+  #   driver: local
+  #   driver_opts:
+  #     type: none
+  #     device: ${PWD}/node_modules
+  #     o: bind
