@@ -9,7 +9,6 @@ services:
     environment:
       - WATCHPACK_POLLING=true
       - DATABASE_URL=mysql://root:p@ssword@mysql:3306/football_contract_sim
-    command: sh -c "npx prisma migrate dev && npm run dev"
     ports:
       - "3000:3000"
     depends_on:
