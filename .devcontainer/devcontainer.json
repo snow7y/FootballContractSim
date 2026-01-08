@@ -9,6 +9,7 @@
   "remoteUser": "node",
   // "postCreateCommand": "npm ci && npx prisma generate || true",
   "postCreateCommand": "sudo chown -R node:node /app",
+  "postAttachCommand": "sh -c './scripts/startup.sh'",
   // "updateContentCommand": "npx prisma generate || true",
   "customizations": {
     "vscode": {

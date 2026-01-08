@@ -11,6 +11,11 @@ docker compose up
 # Error response from daemon: error while mounting volume というエラーが発生した場合は空のnode_modulesを作成してから再度実行
 mkdir node_modules
 docker compose up
+
+
+# もしdevcontainerを使用していない場合はDB用のセットアップコマンドを入力
+docker compose exec app sh -c ./scripts/startup.sh
+
 ```
 
 [localhost:3000](http://localhost:3000)にアクセスすると、アプリケーションが表示される。
@@ -19,6 +24,7 @@ docker compose up
 
 ```powershell
 docker compose up
+npm run dev
 ```
 
 ## 開発時
