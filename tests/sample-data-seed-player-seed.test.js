@@ -28,11 +28,20 @@ async function main() {
 
   const prisma = new PrismaClient();
   const sampleNames = SAMPLE_PLAYERS.map((player) => player.name);
+  const teamNames = (service.SAMPLE_TEAMS || []).map((t) => t.name);
 
   try {
     // 対象サンプルプレイヤーとチームをクリーンアップ
+    await prisma.contract.deleteMany({
+      where: {
+        OR: [
+          { player: { name: { in: sampleNames } } },
+          { team: { name: { in: teamNames } } },
+        ],
+      },
+    });
     await prisma.player.deleteMany({ where: { name: { in: sampleNames } } });
-    await prisma.team.deleteMany({ where: { name: { in: (service.SAMPLE_TEAMS || []).map((t) => t.name) } } });
+    await prisma.team.deleteMany({ where: { name: { in: teamNames } } });
 
     // 先にサンプルチームを投入し、currentClub 参照が有効であることを保証
     await seedSampleTeams(prisma);

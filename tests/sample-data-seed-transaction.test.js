@@ -30,6 +30,14 @@ async function main() {
   const playerNames = SAMPLE_PLAYERS.map((player) => player.name);
 
   try {
+    await prisma.contract.deleteMany({
+      where: {
+        OR: [
+          { player: { name: { in: playerNames } } },
+          { team: { name: { in: teamNames } } },
+        ],
+      },
+    });
     await prisma.player.deleteMany({ where: { name: { in: playerNames } } });
     await prisma.team.deleteMany({ where: { name: { in: teamNames } } });
 

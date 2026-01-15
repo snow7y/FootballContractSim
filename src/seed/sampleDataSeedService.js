@@ -283,7 +283,7 @@ function pushSeedError(errors, entity, identifier, error) {
   errors.push({
     entity,
     identifier,
-    message: error && error.message ? String(error.message) : String(error),
+    message: error?.message ? String(error.message) : String(error),
   });
 }
 

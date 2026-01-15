@@ -49,6 +49,11 @@ async function main() {
     const sampleNames = SAMPLE_TEAMS.map((t) => t.name);
 
     // 前提クリーンアップ: 対象サンプルチームを削除
+    await prisma.contract.deleteMany({
+      where: {
+        team: { name: { in: sampleNames } },
+      },
+    });
     await prisma.team.deleteMany({ where: { name: { in: sampleNames } } });
 
     // 1回目のシード: 全て作成される想定

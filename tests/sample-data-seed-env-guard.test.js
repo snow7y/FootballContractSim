@@ -34,7 +34,7 @@ async function main() {
   for (const env of [undefined, 'production', 'staging']) {
     let threw = false;
     try {
-      // @ts-ignore
+      // @ts-expect-error
       assertSeedEnvironmentAllowed(env);
     } catch (e) {
       threw = true;
@@ -48,6 +48,11 @@ async function main() {
   const prisma = new PrismaClient();
   try {
     const sampleNames = (SAMPLE_TEAMS || []).map((t) => t.name);
+    await prisma.contract.deleteMany({
+      where: {
+        team: { name: { in: sampleNames } },
+      },
+    });
     await prisma.team.deleteMany({ where: { name: { in: sampleNames } } });
 
     const cliPath = path.join(rootDir, 'scripts', 'sample-data-seed.js');
