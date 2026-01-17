@@ -8,11 +8,14 @@
     "start": "next start",
     "lint": "biome check",
     "format": "biome format --write",
-    "seed:sample": "node scripts/sample-data-seed.js"
+    "seed:sample": "node scripts/sample-data-seed.js",
+    "test": "node scripts/test-execution.js",
+    "test:watch": "vitest",
+    "test:ci": "node scripts/test-execution.js --mode=ci"
   },
   "dependencies": {
     "@prisma/client": "^6.15.0",
-    "next": "15.5.2",
+    "next": "^15.5.9",
     "react": "19.1.0",
     "react-dom": "19.1.0"
   },
@@ -23,8 +26,10 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "prisma": "^6.15.0",
-    "ts-node": "^10.9.2",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "ts-node": "^1.7.1",
+    "tsx": "^4.19.3",
+    "typescript": "^5",
+    "vitest": "^4.0.17"
   }
 }
