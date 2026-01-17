@@ -15,11 +15,25 @@ export default function ActionHistory({ actions }: { actions: ActionResultSummar
         <ul className="mt-3 space-y-3 text-sm text-slate-700">
           {actions.map((action) => (
             <li key={action.id} className="rounded-md border border-slate-100 p-3">
-              <p className="font-medium">{action.message}</p>
+              <p className="font-medium">
+                <span className="mr-2">
+                  {action.status === 'Success' ? '✅' : action.status === 'Failure' ? '❌' : '⏳'}
+                </span>
+                {action.message}
+              </p>
               <p className="mt-1 text-xs text-slate-500">
                 {action.actionType} ・ {new Date(action.occurredAt).toLocaleString('ja-JP')}
               </p>
               {action.hint && <p className="mt-1 text-xs text-amber-600">ヒント: {action.hint}</p>}
+              {action.deltaHighlights && action.deltaHighlights.length > 0 && (
+                <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-emerald-600">
+                  {action.deltaHighlights
+                    .filter((highlight) => !highlight.startsWith('meta:'))
+                    .map((highlight) => (
+                      <li key={highlight}>{highlight}</li>
+                    ))}
+                </ul>
+              )}
             </li>
           ))}
         </ul>

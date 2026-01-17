@@ -23,6 +23,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "prisma": "^6.15.0",
+    "ts-node": "^10.9.2",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
