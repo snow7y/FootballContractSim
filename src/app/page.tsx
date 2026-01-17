@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import prisma from '@/lib/prisma';
 import ContractFlow from './contracts/ContractFlow';
+import UserLoginGate from './contracts/UserLoginGate';
+import { getDashboardData } from './contracts/gameplay-state-service';
 import { getCurrentUser, listUsers } from './contracts/user-actions';
 
 export default async function Home() {
@@ -21,6 +23,9 @@ export default async function Home() {
     ? { id: currentUserResult.userId, name: currentUserResult.displayName }
     : null;
 
+  const dashboardResult = currentUser ? await getDashboardData() : null;
+  const dashboardData = dashboardResult && dashboardResult.ok ? dashboardResult.data : null;
+
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-10 text-slate-900">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
@@ -40,7 +45,7 @@ export default async function Home() {
           </div>
         </header>
 
-        <ContractFlow
+        <UserLoginGate
           players={players.map((player) => ({
             id: player.id,
             name: player.name,
@@ -53,6 +58,7 @@ export default async function Home() {
           }))}
           users={users}
           currentUser={currentUser}
+          initialDashboardData={dashboardData}
         />
       </div>
     </div>

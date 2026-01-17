@@ -3,7 +3,13 @@
 import { useMemo, useState, useTransition, type ChangeEvent } from 'react';
 import Link from 'next/link';
 import { createContract } from './contract-actions';
-import { createUser, setCurrentUser } from './user-actions';
+import ActionFeedback from './ActionFeedback';
+import ActionHistory from './ActionHistory';
+import GoalPanel from './GoalPanel';
+import PanelGrid from './PanelGrid';
+import PhaseProgress from './PhaseProgress';
+import ScorePanel from './ScorePanel';
+import type { GameplayDashboardData } from './gameplay-state-service';
 
 export type ContractOption = {
   id: number;
@@ -14,8 +20,9 @@ export type ContractOption = {
 type ContractFlowProps = {
   players: ContractOption[];
   teams: ContractOption[];
-  users: { id: number; name: string }[];
-  currentUser?: { id: number; name: string } | null;
+  dashboardData: GameplayDashboardData | null;
+  onRefreshDashboard: () => Promise<void>;
+  currentUser: { id: number; name: string } | null;
 };
 
 type DraftState = {
@@ -34,15 +41,14 @@ const initialDraft: DraftState = {
   wage: '',
 };
 
-export default function ContractFlow({ players, teams, users, currentUser }: ContractFlowProps) {
+export default function ContractFlow({ players, teams, dashboardData, onRefreshDashboard, currentUser }: ContractFlowProps) {
   const [started, setStarted] = useState(false);
   const [draft, setDraft] = useState<DraftState>(initialDraft);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
   const [contractId, setContractId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [selectedUserId, setSelectedUserId] = useState<string>(currentUser ? String(currentUser.id) : '');
-  const [userName, setUserName] = useState('');
-  const [userList, setUserList] = useState(users);
+
+  const latestAction = dashboardData?.recentActions?.[0] ?? null;
 
   const canStart = players.length > 0 && teams.length > 0;
 
@@ -57,7 +63,6 @@ export default function ContractFlow({ players, teams, users, currentUser }: Con
 
   const validationErrors = useMemo(() => {
     const errors: string[] = [];
-    if (!selectedUserId) errors.push('ユーザーを選択してください');
     if (!draft.playerId) errors.push('選手を選択してください');
     if (!draft.teamId) errors.push('クラブを選択してください');
     if (!draft.startDate) errors.push('開始日を入力してください');
@@ -67,7 +72,7 @@ export default function ContractFlow({ players, teams, users, currentUser }: Con
       errors.push('契約期間は開始日より終了日を後にしてください');
     }
     return errors;
-  }, [draft, selectedUserId]);
+  }, [draft]);
 
   const isSubmitDisabled = validationErrors.length > 0 || isPending;
 
@@ -76,35 +81,6 @@ export default function ContractFlow({ players, teams, users, currentUser }: Con
     setDraft((prev) => ({ ...prev, [field]: event.target.value }));
     setResultMessage(null);
     setContractId(null);
-  };
-
-  const handleUserSelect = async () => {
-    const userId = Number(selectedUserId);
-    if (!Number.isInteger(userId) || userId <= 0) {
-      setResultMessage('ユーザーを選択してください。');
-      return;
-    }
-
-    const result = await setCurrentUser({ userId });
-    if (!result.ok) {
-      setResultMessage(result.error.message);
-      return;
-    }
-
-    setResultMessage(`現在のユーザー: ${result.displayName}`);
-  };
-
-  const handleCreateUser = async () => {
-    const result = await createUser({ name: userName });
-    if (!result.ok) {
-      setResultMessage(result.error.message);
-      return;
-    }
-
-    setUserList((prev) => [{ id: result.userId, name: result.displayName }, ...prev]);
-    setSelectedUserId(String(result.userId));
-    setUserName('');
-    setResultMessage(`現在のユーザー: ${result.displayName}`);
   };
 
   const handleSubmit = () => {
@@ -122,17 +98,26 @@ export default function ContractFlow({ players, teams, users, currentUser }: Con
 
       if (!response.ok) {
         setResultMessage(response.error.message);
+        await onRefreshDashboard();
         return;
       }
 
       setContractId(response.contractId);
       setResultMessage('契約が作成されました。');
       setDraft(initialDraft);
+      await onRefreshDashboard();
     });
   };
 
   return (
     <section className="space-y-6">
+      <PanelGrid>
+        <PhaseProgress phase={dashboardData?.phase ?? null} />
+        <GoalPanel goals={dashboardData?.goals ?? []} />
+        <ActionFeedback latestAction={latestAction} isPending={isPending} />
+        <ScorePanel score={dashboardData?.score ?? null} />
+      </PanelGrid>
+      <ActionHistory actions={dashboardData?.recentActions ?? []} />
       <header className="space-y-3">
         <h1 className="text-2xl font-semibold text-slate-900">契約を開始</h1>
         <p className="text-sm text-slate-600">
@@ -149,6 +134,7 @@ export default function ContractFlow({ players, teams, users, currentUser }: Con
             ? `契約可能: 選手 ${players.length} 名 / クラブ ${teams.length} 件`
             : '契約対象がまだ登録されていません。'}
         </div>
+        {currentUser && <p className="text-sm text-slate-600">現在のユーザー: {currentUser.name}</p>}
       </header>
 
       {!canStart && (
@@ -177,52 +163,6 @@ export default function ContractFlow({ players, teams, users, currentUser }: Con
 
       {canStart && started && (
         <div className="space-y-6">
-          <section className="rounded-xl border border-slate-200 p-4 space-y-3">
-            <h2 className="text-base font-semibold text-slate-800">ユーザーの選択</h2>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <select
-                id="currentUser"
-                name="currentUser"
-                value={selectedUserId}
-                onChange={(event) => setSelectedUserId(event.target.value)}
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-              >
-                <option value="">ユーザーを選択してください</option>
-                {userList.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.name}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
-                onClick={handleUserSelect}
-              >
-                このユーザーを利用
-              </button>
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <input
-                type="text"
-                value={userName}
-                onChange={(event) => setUserName(event.target.value)}
-                placeholder="新しいユーザー名"
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-              />
-              <button
-                type="button"
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
-                onClick={handleCreateUser}
-              >
-                新規ユーザー作成
-              </button>
-            </div>
-            {currentUser && (
-              <p className="text-sm text-slate-600">現在のユーザー: {currentUser.name}</p>
-            )}
-          </section>
-
           <section className="rounded-xl border border-slate-200 p-4 space-y-4">
             <h2 className="text-base font-semibold text-slate-800">契約対象の選択</h2>
             <div className="grid gap-4 md:grid-cols-2">

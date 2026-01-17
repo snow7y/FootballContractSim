@@ -20,8 +20,8 @@ export async function listUsers() {
   });
 }
 
-function readUserIdCookie(): number | null {
-  const cookieStore = cookies();
+async function readUserIdCookie(): Promise<number | null> {
+  const cookieStore = await cookies();
   const raw = cookieStore.get(USER_COOKIE_KEY)?.value;
   if (!raw) return null;
   const parsed = Number(raw);
@@ -31,7 +31,7 @@ function readUserIdCookie(): number | null {
 
 export async function getCurrentUser(): Promise<UserContextResult> {
   try {
-    const userId = readUserIdCookie();
+    const userId = await readUserIdCookie();
     if (!userId) {
       return { ok: false, error: { type: 'NotSelected', message: 'ユーザーが選択されていません。' } };
     }
@@ -59,11 +59,20 @@ export async function setCurrentUser(input: { userId: number }): Promise<UserCon
       return { ok: false, error: { type: 'NotSelected', message: 'ユーザーが見つかりません。' } };
     }
 
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     cookieStore.set(USER_COOKIE_KEY, String(user.id), {
       path: '/',
       httpOnly: true,
       sameSite: 'lax',
+    });
+
+    await prisma.actionLog.create({
+      data: {
+        userId: user.id,
+        actionType: 'UserSelected',
+        status: 'Success',
+        message: `ユーザーを選択しました: ${user.name}`,
+      },
     });
 
     return { ok: true, userId: user.id, displayName: user.name };
@@ -82,11 +91,20 @@ export async function createUser(input: { name: string }): Promise<UserContextRe
 
     const user = await prisma.user.create({ data: { name } });
 
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     cookieStore.set(USER_COOKIE_KEY, String(user.id), {
       path: '/',
       httpOnly: true,
       sameSite: 'lax',
+    });
+
+    await prisma.actionLog.create({
+      data: {
+        userId: user.id,
+        actionType: 'UserCreated',
+        status: 'Success',
+        message: `ユーザーを作成しました: ${user.name}`,
+      },
     });
 
     return { ok: true, userId: user.id, displayName: user.name };

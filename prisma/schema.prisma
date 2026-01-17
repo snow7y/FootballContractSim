@@ -50,6 +50,33 @@ enum Position {
   CF
 }
 
+enum PhaseStatus {
+  NotStarted
+  InProgress
+  Completed
+}
+
+enum GoalStatus {
+  Active
+  Completed
+  Expired
+  Disabled
+}
+
+enum ActionStatus {
+  Success
+  Failure
+  Pending
+}
+
+enum ActionType {
+  ContractCreated
+  UserSelected
+  UserCreated
+  ContractFailed
+  PhaseUpdated
+}
+
 model Team {
   id         Int      @id @default(autoincrement())
   name       String
@@ -67,7 +94,11 @@ model User {
   name      String
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
-  contracts Contract[]
+  contracts       Contract[]
+  phaseStates     GameplayPhaseState[]
+  goals           Goal[]
+  actionLogs      ActionLog[]
+  scoreSnapshots  ScoreSnapshot[]
 
   @@index([name])
 }
@@ -86,11 +117,93 @@ model Contract {
   user   User   @relation(fields: [userId], references: [id])
   player Player @relation(fields: [playerId], references: [id])
   team   Team   @relation(fields: [teamId], references: [id])
+  scoreSnapshots ScoreSnapshot[]
 
   @@index([userId])
   @@index([playerId])
   @@index([teamId])
   @@index([startDate])
+}
+
+model GameplayPhaseState {
+  id         Int         @id @default(autoincrement())
+  userId     Int
+  phaseId    String
+  phaseLabel String
+  stepIndex  Int
+  totalSteps Int
+  status     PhaseStatus
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, phaseId])
+  @@index([userId])
+  @@index([status])
+}
+
+model Goal {
+  id            Int        @id @default(autoincrement())
+  userId        Int
+  title         String
+  description   String?
+  status        GoalStatus
+  reason        String?
+  progressLabel String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+}
+
+model ActionLog {
+  id              Int          @id @default(autoincrement())
+  userId          Int
+  actionType      ActionType
+  status          ActionStatus
+  message         String
+  hint            String?
+  deltaHighlights Json?
+  occurredAt      DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([occurredAt])
+}
+
+model ScoreSnapshot {
+  id           Int          @id @default(autoincrement())
+  userId       Int
+  contractId   Int?
+  totalScore   Int
+  calculatedAt DateTime     @default(now())
+  metrics      ScoreMetric[]
+
+  user     User      @relation(fields: [userId], references: [id])
+  contract Contract? @relation(fields: [contractId], references: [id])
+
+  @@index([userId])
+  @@index([calculatedAt])
+}
+
+model ScoreMetric {
+  id            Int      @id @default(autoincrement())
+  snapshotId    Int
+  label         String
+  value         Int
+  maxValue      Int?
+  delta         Int?
+  description   String?
+  missingReason String?
+
+  snapshot ScoreSnapshot @relation(fields: [snapshotId], references: [id])
+
+  @@index([snapshotId])
 }
 
 

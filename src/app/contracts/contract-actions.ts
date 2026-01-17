@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import prisma from '@/lib/prisma';
 import { getCurrentUser } from './user-actions';
+import { recordAction, refreshScore, updatePhase } from './gameplay-state-service';
 
 export type ContractCreateInput = {
   playerId: number;
@@ -70,6 +71,12 @@ export async function createContract(input: ContractCreateInput): Promise<Contra
 
     const validation = validateContractInput(input);
     if (validation.fields.length) {
+      await recordAction({
+        actionType: 'ContractFailed',
+        status: 'Failure',
+        message: '契約入力に不備があります。',
+        hint: '入力内容を確認してください。',
+      });
       return {
         ok: false,
         error: { type: 'Validation', message: '入力内容に不備があります。', fields: validation.fields },
@@ -82,6 +89,12 @@ export async function createContract(input: ContractCreateInput): Promise<Contra
     ]);
 
     if (!player || !team) {
+      await recordAction({
+        actionType: 'ContractFailed',
+        status: 'Failure',
+        message: '選択された選手またはクラブが見つかりません。',
+        hint: '選択内容を再確認してください。',
+      });
       return {
         ok: false,
         error: { type: 'NotFound', message: '選択された選手またはクラブが見つかりません。' },
@@ -99,10 +112,32 @@ export async function createContract(input: ContractCreateInput): Promise<Contra
       },
     });
 
+    await Promise.allSettled([
+      updatePhase({
+        phaseId: 'contract',
+        stepIndex: 3,
+        totalSteps: 4,
+        status: 'Completed',
+      }),
+      recordAction({
+        actionType: 'ContractCreated',
+        status: 'Success',
+        message: `契約を作成しました: ${player.name} → ${team.name}`,
+        deltaHighlights: ['契約が追加されました', `報酬: ${input.wage}`],
+      }),
+      refreshScore({ contractId: created.id }),
+    ]);
+
     revalidatePath('/');
     return { ok: true, contractId: created.id };
   } catch (error) {
     console.error(error);
+    await recordAction({
+      actionType: 'ContractFailed',
+      status: 'Failure',
+      message: '契約の作成に失敗しました。',
+      hint: '時間をおいて再試行してください。',
+    });
     return { ok: false, error: { type: 'System', message: '契約の作成に失敗しました。' } };
   }
 }
