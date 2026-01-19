@@ -95,10 +95,6 @@ const DEFAULT_GOALS = [
   },
 ];
 
-const FIRST_CONTRACT_GOAL_TITLE = DEFAULT_GOALS[0].title;
-const TEAM_COUNT_GOAL_TITLE = DEFAULT_GOALS[1].title;
-const TEAM_COUNT_TARGET = 3;
-
 const PHASE_LABELS: Record<string, string> = {
   contract: '契約フェーズ',
   overview: 'クラブ状況フェーズ',
@@ -155,56 +151,6 @@ async function ensureDefaultGoals(userId: number): Promise<StoredGoal[]> {
   return prisma.goal.findMany({ where: { userId } });
 }
 
-async function syncGoalProgress(userId: number, teamCount: number, contractCount: number): Promise<StoredGoal[]> {
-  const goals = await ensureDefaultGoals(userId);
-  const updates: Promise<unknown>[] = [];
-
-  const firstContractGoal = goals.find((goal) => goal.title === FIRST_CONTRACT_GOAL_TITLE);
-  if (firstContractGoal && (firstContractGoal.status === 'Active' || firstContractGoal.status === 'Completed')) {
-    const completed = contractCount >= 1;
-    const nextStatus = completed ? 'Completed' : 'Active';
-    const nextProgressLabel = `${Math.min(contractCount, 1)}/1 完了`;
-    if (firstContractGoal.status !== nextStatus || firstContractGoal.progressLabel !== nextProgressLabel) {
-      updates.push(
-        prisma.goal.update({
-          where: { id: firstContractGoal.id },
-          data: {
-            status: nextStatus,
-            progressLabel: nextProgressLabel,
-            reason: null,
-          },
-        })
-      );
-    }
-  }
-
-  const teamCountGoal = goals.find((goal) => goal.title === TEAM_COUNT_GOAL_TITLE);
-  if (teamCountGoal && (teamCountGoal.status === 'Active' || teamCountGoal.status === 'Completed')) {
-    const progress = Math.min(teamCount, TEAM_COUNT_TARGET);
-    const completed = teamCount >= TEAM_COUNT_TARGET;
-    const nextStatus = completed ? 'Completed' : 'Active';
-    const nextProgressLabel = `${progress}/${TEAM_COUNT_TARGET} 完了`;
-    if (teamCountGoal.status !== nextStatus || teamCountGoal.progressLabel !== nextProgressLabel) {
-      updates.push(
-        prisma.goal.update({
-          where: { id: teamCountGoal.id },
-          data: {
-            status: nextStatus,
-            progressLabel: nextProgressLabel,
-            reason: null,
-          },
-        })
-      );
-    }
-  }
-
-  if (updates.length) {
-    await Promise.all(updates);
-  }
-
-  return prisma.goal.findMany({ where: { userId } });
-}
-
 function mapGoal(goal: StoredGoal): GoalState {
   return {
     id: String(goal.id),
@@ -252,11 +198,12 @@ export async function getDashboardData(): Promise<GameplayStateResult<GameplayDa
       return { ok: false, error: { type: 'UserContextMissing', message: '現在のユーザーが未選択です。' } };
     }
 
-    const [phase, recentActions, scoreSnapshot, playerCount, teamCount, contractCount] = await Promise.all([
+    const [phase, goals, recentActions, scoreSnapshot, playerCount, teamCount] = await Promise.all([
       prisma.gameplayPhaseState.findFirst({
         where: { userId: userContext.userId },
         orderBy: { updatedAt: 'desc' },
       }),
+      ensureDefaultGoals(userContext.userId),
       prisma.actionLog.findMany({
         where: { userId: userContext.userId },
         orderBy: { occurredAt: 'desc' },
@@ -269,10 +216,7 @@ export async function getDashboardData(): Promise<GameplayStateResult<GameplayDa
       }),
       prisma.player.count(),
       prisma.team.count(),
-      prisma.contract.count({ where: { userId: userContext.userId } }),
     ]);
-
-    const goals = await syncGoalProgress(userContext.userId, teamCount, contractCount);
 
     const activeGoals = goals.filter((goal: StoredGoal) => goal.status === 'Active').length;
 
