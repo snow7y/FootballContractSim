@@ -24,6 +24,8 @@ docker compose exec app sh -c ./scripts/startup.sh
 
 ```powershell
 docker compose up
+docker compose exec app sh -c "npm run dev"
+# or use devcontainer
 npm run dev
 ```
 
